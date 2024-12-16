@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 SECRET_KEY = os.getenv('JWT_SECRET_KEY')
 
-def authorize_admin(required_admin_code):
+
+def verification_auth(required_admin_code):
     """
     Проверяет аутентификацию и авторизацию администратора.
 
@@ -46,6 +47,8 @@ def authorize_admin(required_admin_code):
     # Проверка специального кода администратора, если он передан
     data = request.get_json()
     admin_code = data.get('admin_code')
+    print("data ",admin_code)
+    print("rec ", required_admin_code)
     if admin_code != required_admin_code:
         return jsonify({"error": "Invalid admin code."}), 403
 

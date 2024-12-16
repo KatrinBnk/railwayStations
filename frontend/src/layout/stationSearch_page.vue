@@ -1,11 +1,18 @@
-<script setup>
-
-</script>
-
 <template>
-  $END$
+  <Header class="page-header"/>
+  <StationSearch/>
 </template>
 
-<style scoped>
+<script>
+import Header from "@/components/header.vue"
+import StationSearch from "@/components/stationSearch.vue";
+export default {
+  components:{
+    Header,
+    StationSearch
+  }
+}
+</script>
 
+<style scoped>
 </style>

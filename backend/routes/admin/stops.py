@@ -7,17 +7,20 @@ import logging
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from .verification_auth import verification_auth
 
 # Загрузка переменных окружения
 load_dotenv()
-ADD_STOP_CODE = os.getenv('ADD_STOP_CODE', 'DEFAULT_ADD_STOP_CODE')
+ADD_STOP_CODE = os.getenv('ADD_STOP_CODE')
 
 stops_bp = Blueprint('stops_bp', __name__, url_prefix='/stops')
 
-@stops_bp.route('/add', methods=['POST'])
+@stops_bp.route('/stops/add', methods=['POST'])
 def add_stop():
-    #TODO: add auth check
 
+    auth_response = verification_auth(ADD_STOP_CODE)
+    if auth_response is not None:
+        return auth_response
     try:
         # Получение данных из запроса
         data = request.get_json()
@@ -30,15 +33,9 @@ def add_stop():
         departure_time_str = data['departure_time']
         day_in = data['day_in']
 
-        # Проверка существования поезда
-        train = Train.query.get(train_id)
-        if train is None:
-            return jsonify({"error": "Train not found."}), 404
-
-        # Проверка существования станции
-        station = Station.query.get(station_id)
-        if station is None:
-            return jsonify({"error": "Station not found."}), 404
+        check_data = checker(data)
+        if check_data is not None:
+            return check_data
 
         # Конвертация времени прибытия и отправления
         try:
@@ -46,10 +43,6 @@ def add_stop():
             departure_time = datetime.strptime(departure_time_str, "%H:%M:%S").time()
         except ValueError:
             return jsonify({"error": "Invalid time format. Expected format: HH:MM:SS."}), 400
-
-        # Проверка валидности параметра day_in
-        if not isinstance(day_in, int) or day_in < 0:
-            return jsonify({"error": "Invalid day_in. It should be a non-negative integer."}), 400
 
         # Проверка пересечения остановок
         existing_schedules = Schedule.query.filter_by(train_id=train_id, day_in=day_in).all()
@@ -82,11 +75,13 @@ def add_stop():
         logging.exception("Произошла непредвиденная ошибка при попытке добавления остановки в расписание.")
         return jsonify({"error": "Internal server error occurred."}), 500
 
-DELETE_STOP_CODE = os.getenv('DELETE_STOP_CODE', 'DEFAULT_DELETE_STOP_CODE')
+DELETE_STOP_CODE = os.getenv('DELETE_STOP_CODE')
 
-@stops_bp.route('/delete', methods=['DELETE'])
+@stops_bp.route('/stops/delete', methods=['DELETE'])
 def delete_stop():
-    #TODO: Проверка авторизации администратора
+    auth_response = verification_auth(DELETE_STOP_CODE)
+    if auth_response is not None:
+        return auth_response
 
     try:
         # Получение данных из запроса
@@ -98,19 +93,9 @@ def delete_stop():
         station_id = data['station_id']
         day_in = data['day_in']
 
-        # Проверка существования поезда
-        train = Train.query.get(train_id)
-        if train is None:
-            return jsonify({"error": "Train not found."}), 404
-
-        # Проверка существования станции
-        station = Station.query.get(station_id)
-        if station is None:
-            return jsonify({"error": "Station not found."}), 404
-
-        # Проверка валидности параметра day_in
-        if not isinstance(day_in, int) or day_in < 0:
-            return jsonify({"error": "Invalid day_in. It should be a non-negative integer."}), 400
+        check_data = checker(data)
+        if check_data is not None:
+            return check_data
 
         # Проверка существования записи остановки в расписании
         schedule_record = Schedule.query.filter_by(train_id=train_id, station_id=station_id, day_in=day_in).first()
@@ -127,3 +112,29 @@ def delete_stop():
         # Логирование ошибки и возврат ответа с 500 статусом
         logging.exception("Произошла непредвиденная ошибка при попытке удаления станции из расписания.")
         return jsonify({"error": "Internal server error occurred."}), 500
+
+def checker(data):
+    train_id = data['train_id']
+    station_id = data['station_id']
+    day_in = data['day_in']
+
+    # Проверка существования поезда
+    train = Train.query.get(train_id)
+    if train is None:
+        return jsonify({"error": "Train not found."}), 404
+
+    # Проверка существования станции
+    station = Station.query.get(station_id)
+    if station is None:
+        return jsonify({"error": "Station not found."}), 404
+
+        # Проверка существования станции
+    station = Station.query.get(station_id)
+    if station is None:
+        return jsonify({"error": "Station not found."}), 404
+
+        # Проверка валидности параметра day_in
+    if not isinstance(day_in, int) or day_in < 0:
+        return jsonify({"error": "Invalid day_in. It should be a non-negative integer."}), 400
+
+    return None
