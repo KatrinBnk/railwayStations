@@ -145,6 +145,9 @@ def view_return_requests():
             passenger = Passenger.query.filter_by(passenger_id=ticket.passenger_id).first()
             buyer = Passenger.query.filter_by(passenger_id=ticket.buyer_id).first()
 
+            if buyer is None:
+                buyer = Staff.query.filter_by(user_id=ticket.buyer_id).first()
+
             if not passenger:
                 # Логирование, если информация о покупателе не найдена
                 logging.warning(f"Информация о покупателе не найдена для билета {ticket.id}")
